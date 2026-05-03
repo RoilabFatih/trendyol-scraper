@@ -1,0 +1,10 @@
+{
+  "panel_url": "https://web-production-f4cf6.up.railway.app",
+  "access_token": "BURAYA_ACCESS_TOKEN_KOY",
+  "seller_id": "BURAYA_SATICI_ID_KOY",
+  "api_key": "",
+  "api_secret": "",
+  "api_base_url": "",
+  "page_size": 200,
+  "scrape_max_pages": 200
+}

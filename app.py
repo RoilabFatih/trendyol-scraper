@@ -167,6 +167,28 @@ def job_status():
     })
 
 
+# ---------------- ingest (for the local runner) ----------------
+
+@app.route("/api/ingest/api-products", methods=["POST"])
+def ingest_api_products():
+    payload = request.get_json(silent=True) or {}
+    rows = payload.get("rows") or []
+    if not isinstance(rows, list):
+        return jsonify({"ok": False, "error": "rows bir liste olmalı."}), 400
+    inserted = db.upsert_api_products(rows)
+    return jsonify({"ok": True, "inserted": inserted, "total": db.count_api_products()})
+
+
+@app.route("/api/ingest/scraped-products", methods=["POST"])
+def ingest_scraped_products():
+    payload = request.get_json(silent=True) or {}
+    rows = payload.get("rows") or []
+    if not isinstance(rows, list):
+        return jsonify({"ok": False, "error": "rows bir liste olmalı."}), 400
+    inserted = db.upsert_scraped_products(rows)
+    return jsonify({"ok": True, "inserted": inserted, "total": db.count_scraped_products()})
+
+
 # ---------------- data ----------------
 
 @app.route("/api/data/api-products")
