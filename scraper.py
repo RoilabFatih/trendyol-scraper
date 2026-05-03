@@ -47,6 +47,13 @@ class TrendyolScraper:
         primary = self._extract_primary_seller(html)
         others = self._extract_other_sellers(html)
 
+        offer = (ld or {}).get("offers") or {}
+        base_price = _to_float(offer.get("price")) or _to_float(offer.get("lowPrice"))
+        if primary and base_price is not None:
+            for variant in primary.get("variants", []):
+                if variant.get("price") is None and variant.get("inStock"):
+                    variant["price"] = base_price
+
         sizes = self._collect_size_index(primary, others)
 
         title = (
@@ -74,7 +81,6 @@ class TrendyolScraper:
         if not images and meta_data.get("image"):
             images = [meta_data["image"]]
 
-        offer = (ld or {}).get("offers") or {}
         currency = offer.get("priceCurrency") or "TRY"
 
         return {
