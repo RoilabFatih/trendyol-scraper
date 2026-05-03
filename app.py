@@ -1,6 +1,10 @@
 import os
+import secrets
+from urllib.parse import urlencode
 
-from flask import Flask, jsonify, render_template, request
+from flask import (
+    Flask, jsonify, redirect, render_template, request, make_response,
+)
 
 import db
 import job_runner
@@ -10,6 +14,61 @@ app = Flask(__name__)
 db.init_db()
 
 product_scraper = TrendyolScraper()
+
+
+# ---------------- access gate ----------------
+
+ACCESS_TOKEN = (os.environ.get("ACCESS_TOKEN") or "").strip()
+COOKIE_NAME = "ts_access"
+COOKIE_MAX_AGE = 60 * 60 * 24 * 180  # 180 days
+PUBLIC_PATHS = {"/healthz"}
+
+
+@app.before_request
+def gate():
+    if not ACCESS_TOKEN:
+        return  # protection disabled — fail open if env var missing
+    if request.path in PUBLIC_PATHS:
+        return
+
+    qtoken = request.args.get("token", "")
+    if qtoken and secrets.compare_digest(qtoken, ACCESS_TOKEN):
+        # Strip the token from the URL so it isn't bookmarked / leaked.
+        clean = request.args.to_dict(flat=True)
+        clean.pop("token", None)
+        target = request.path + (("?" + urlencode(clean)) if clean else "")
+        resp = make_response(redirect(target))
+        resp.set_cookie(
+            COOKIE_NAME, ACCESS_TOKEN,
+            max_age=COOKIE_MAX_AGE,
+            secure=True, httponly=True, samesite="Lax",
+        )
+        return resp
+
+    cookie = request.cookies.get(COOKIE_NAME, "")
+    if cookie and secrets.compare_digest(cookie, ACCESS_TOKEN):
+        return  # allow
+
+    return _denied_response()
+
+
+def _denied_response():
+    html = (
+        "<!doctype html><html lang=tr><meta charset=utf-8>"
+        "<title>Erişim engellendi</title>"
+        "<style>body{margin:0;min-height:100vh;display:flex;align-items:center;"
+        "justify-content:center;font-family:system-ui,-apple-system,sans-serif;"
+        "background:#0f172a;color:#f1f5f9}"
+        ".box{max-width:420px;padding:2rem;text-align:center;"
+        "border:1px solid #334155;border-radius:.6rem;background:#1e293b}"
+        "h1{margin:0 0 .5rem;font-size:1.1rem;color:#f97316}"
+        "p{color:#94a3b8;font-size:.9rem;line-height:1.5;margin:0}"
+        "</style><div class=box>"
+        "<h1>🔒 Erişim engellendi</h1>"
+        "<p>Bu paneli görüntülemek için size verilen tam linki kullanmanız gerekir.</p>"
+        "</div></html>"
+    )
+    return html, 401, {"Content-Type": "text/html; charset=utf-8"}
 
 
 # ---------------- pages ----------------
