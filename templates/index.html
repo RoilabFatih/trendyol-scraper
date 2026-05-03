@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trendyol Ürün Bilgisi</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --accent: #f97316;
+            --accent-hover: #ea580c;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --border: #334155;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--bg) 0%, #1e1b4b 100%);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        .container { max-width: 720px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin: 0 0 0.5rem;
+            background: linear-gradient(90deg, #f97316, #fbbf24);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+        form {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        input[type="url"] {
+            flex: 1;
+            padding: 0.85rem 1rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+        input[type="url"]:focus { border-color: var(--accent); }
+        button {
+            padding: 0.85rem 1.5rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover:not(:disabled) { background: var(--accent-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .result {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        .result.error {
+            border-color: #dc2626;
+            background: #450a0a;
+        }
+        .product-title {
+            font-size: 1.25rem;
+            margin: 0 0 0.5rem;
+        }
+        .brand {
+            color: var(--accent);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .price {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fbbf24;
+            margin: 1rem 0;
+        }
+        .price .original {
+            font-size: 1rem;
+            color: var(--muted);
+            text-decoration: line-through;
+            margin-left: 0.75rem;
+            font-weight: 400;
+        }
+        .meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .meta div {
+            background: rgba(255,255,255,0.03);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.4rem;
+        }
+        .meta strong { color: var(--muted); display: block; font-size: 0.75rem; margin-bottom: 0.2rem; }
+        .images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .images img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 0.4rem;
+            background: #fff;
+        }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 2rem; }
+        .description { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Trendyol Ürün Bilgisi</h1>
+        <p class="subtitle">Bir Trendyol ürün linki yapıştırın, anında bilgileri alın.</p>
+
+        <form id="scrape-form">
+            <input
+                type="url"
+                id="url-input"
+                placeholder="https://www.trendyol.com/..."
+                required
+                autofocus
+            />
+            <button type="submit" id="submit-btn">Çek</button>
+        </form>
+
+        <div id="result"></div>
+
+        <footer>Railway üzerinde dağıtıldı · Flask + Python</footer>
+    </div>
+
+    <script>
+        const form = document.getElementById('scrape-form');
+        const input = document.getElementById('url-input');
+        const btn = document.getElementById('submit-btn');
+        const result = document.getElementById('result');
+
+        const fmtPrice = (v, c) => v == null ? '—' : new Intl.NumberFormat('tr-TR', {
+            style: 'currency', currency: c || 'TRY'
+        }).format(v);
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = input.value.trim();
+            if (!url) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>';
+            result.innerHTML = '';
+
+            try {
+                const res = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url }),
+                });
+                const json = await res.json();
+
+                if (!json.ok) {
+                    result.innerHTML = `<div class="result error">${json.error}</div>`;
+                    return;
+                }
+
+                const d = json.data;
+                const images = (d.images || []).map(src =>
+                    `<img src="${src}" alt="" loading="lazy" onerror="this.style.display='none'" />`
+                ).join('');
+
+                result.innerHTML = `
+                    <div class="result">
+                        ${d.brand ? `<div class="brand">${d.brand}</div>` : ''}
+                        <h2 class="product-title">${d.title || 'Ürün'}</h2>
+                        <div class="price">
+                            ${fmtPrice(d.price, d.currency)}
+                            ${d.originalPrice && d.originalPrice !== d.price
+                                ? `<span class="original">${fmtPrice(d.originalPrice, d.currency)}</span>`
+                                : ''}
+                        </div>
+                        ${d.description ? `<p class="description">${d.description}</p>` : ''}
+                        <div class="meta">
+                            ${d.category ? `<div><strong>Kategori</strong>${d.category}</div>` : ''}
+                            ${d.rating ? `<div><strong>Puan</strong>${d.rating.toFixed(1)} ★</div>` : ''}
+                            ${d.ratingCount ? `<div><strong>Değerlendirme</strong>${d.ratingCount.toLocaleString('tr-TR')}</div>` : ''}
+                            ${d.id ? `<div><strong>Ürün ID</strong>${d.id}</div>` : ''}
+                        </div>
+                        ${images ? `<div class="images">${images}</div>` : ''}
+                    </div>
+                `;
+            } catch (err) {
+                result.innerHTML = `<div class="result error">Bağlantı hatası: ${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Çek';
+            }
+        });
+    </script>
+</body>
+</html>
