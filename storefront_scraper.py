@@ -8,6 +8,7 @@ results state). We walk pages until no more products are returned.
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from typing import Iterable
@@ -37,10 +38,15 @@ class StorefrontScraperError(Exception):
 class SellerStorefrontScraper:
     BASE = "https://www.trendyol.com/sr"
 
-    def __init__(self, timeout: int = 25):
+    def __init__(self, timeout: int = 25, proxy: str | None = None):
         self.timeout = timeout
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
+        # Optional outbound proxy: route through a Turkish residential / mobile
+        # proxy if Trendyol's WAF is blocking the server's datacenter IP.
+        proxy = proxy or os.environ.get("TRENDYOL_PROXY") or os.environ.get("HTTPS_PROXY")
+        if proxy:
+            self.session.proxies = {"http": proxy, "https": proxy}
 
     def fetch_page(self, seller_id: str, page: int = 1) -> dict:
         params = {"mid": str(seller_id).strip(), "pi": page}
@@ -50,6 +56,14 @@ class SellerStorefrontScraper:
         except requests.RequestException as exc:
             raise StorefrontScraperError(f"İstek başarısız: {exc}") from exc
 
+        if r.status_code == 403:
+            raise StorefrontScraperError(
+                "HTTP 403 — Trendyol bu sunucunun IP'sinden gelen istekleri engelledi "
+                "(genelde TR-dışı veri merkezi IP'leri Cloudflare WAF tarafından bloklanır). "
+                "Çözüm: bir TR residential/mobile proxy ayarlayın "
+                "(env var: TRENDYOL_PROXY=http://user:pass@host:port) ya da satıcı "
+                "Seller API'si üzerinden çekim yapın."
+            )
         if r.status_code != 200:
             raise StorefrontScraperError(f"HTTP {r.status_code}")
 

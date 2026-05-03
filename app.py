@@ -83,45 +83,6 @@ def healthz():
     return {"status": "ok"}, 200
 
 
-@app.route("/api/_debug/probe")
-def debug_probe():
-    """Diagnose 403s: hit Trendyol from this server and report what it sees."""
-    import requests
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-        ),
-        "Accept-Language": "tr-TR,tr;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    }
-    targets = {
-        "homepage": "https://www.trendyol.com/",
-        "search": "https://www.trendyol.com/sr?q=tisort",
-        "seller": "https://www.trendyol.com/sr?mid=901409&pi=1",
-    }
-    out = {}
-    for name, url in targets.items():
-        try:
-            r = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
-            out[name] = {
-                "status": r.status_code,
-                "bytes": len(r.content),
-                "server": r.headers.get("server"),
-                "via": r.headers.get("via"),
-                "x_country": r.headers.get("x-country") or r.headers.get("cf-ipcountry"),
-            }
-        except Exception as exc:  # noqa: BLE001
-            out[name] = {"error": str(exc)}
-    # Also report this server's outbound IP via a public echo service
-    try:
-        ip_r = requests.get("https://api.ipify.org?format=json", timeout=10)
-        out["our_ip"] = ip_r.json().get("ip")
-    except Exception as exc:  # noqa: BLE001
-        out["our_ip"] = f"err: {exc}"
-    return out
-
-
 # ---------------- single product (legacy) ----------------
 
 @app.route("/api/scrape", methods=["POST"])
