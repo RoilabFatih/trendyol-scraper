@@ -3,274 +3,649 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trendyol Ürün & Satıcı Karşılaştırma</title>
+    <title>Trendyol Satıcı Paneli</title>
     <style>
         :root {
             --bg: #0f172a;
+            --bg-2: #131c33;
             --card: #1e293b;
             --card-2: #273449;
             --accent: #f97316;
             --accent-hover: #ea580c;
-            --best: #22c55e;
-            --best-bg: rgba(34,197,94,.12);
+            --good: #22c55e;
+            --warn: #fbbf24;
+            --bad: #ef4444;
             --text: #f1f5f9;
             --muted: #94a3b8;
             --border: #334155;
         }
         * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
         body {
-            margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: linear-gradient(135deg, var(--bg) 0%, #1e1b4b 100%);
             color: var(--text);
             min-height: 100vh;
-            padding: 1.5rem 1rem 3rem;
+            font-size: 14px;
         }
-        .container { max-width: 1100px; margin: 0 auto; }
-        h1 {
-            text-align: center;
-            font-size: 1.7rem;
-            margin: 0 0 0.4rem;
+        header {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 0.85rem 1.25rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .brand {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 0.6rem;
+        }
+        .brand h1 {
+            font-size: 1.05rem;
+            margin: 0;
             background: linear-gradient(90deg, #f97316, #fbbf24);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .subtitle {
-            text-align: center;
+        nav.tabs { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+        nav.tabs button {
+            background: transparent;
+            border: 1px solid var(--border);
             color: var(--muted);
-            margin-bottom: 1.5rem;
-            font-size: 0.9rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: 0.4rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
         }
-        form {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
+        nav.tabs button:hover { color: var(--text); border-color: var(--accent); }
+        nav.tabs button.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
         }
-        input[type="url"] {
-            flex: 1;
-            padding: 0.85rem 1rem;
+
+        main { max-width: 1280px; margin: 0 auto; padding: 1.25rem; }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        .card {
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 0.5rem;
-            color: var(--text);
+            border-radius: 0.6rem;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .card h2 {
+            margin: 0 0 0.5rem;
             font-size: 1rem;
+            color: var(--text);
+        }
+        .card .hint { color: var(--muted); font-size: 0.8rem; margin-bottom: 1rem; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.85rem; }
+        @media (max-width: 720px) { .form-grid { grid-template-columns: 1fr; } }
+        .field { display: flex; flex-direction: column; gap: 0.3rem; }
+        .field label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .field input, .field select {
+            background: var(--bg-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 0.4rem;
+            padding: 0.6rem 0.7rem;
+            font-size: 0.9rem;
             outline: none;
         }
-        input[type="url"]:focus { border-color: var(--accent); }
-        button {
-            padding: 0.85rem 1.5rem;
+        .field input:focus { border-color: var(--accent); }
+        .field .help { font-size: 0.7rem; color: var(--muted); }
+        .field-secret-state { font-size: 0.7rem; color: var(--good); }
+
+        button.primary {
             background: var(--accent);
-            color: white;
+            color: #fff;
             border: none;
-            border-radius: 0.5rem;
-            font-size: 1rem;
+            padding: 0.6rem 1.1rem;
+            border-radius: 0.4rem;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
         }
-        button:hover:not(:disabled) { background: var(--accent-hover); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+        button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .result {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            margin-top: 1rem;
+        .row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .toast {
+            display: inline-block;
+            padding: 0.3rem 0.7rem;
+            font-size: 0.8rem;
+            border-radius: 0.3rem;
+            margin-left: 0.5rem;
         }
-        .result.error { border-color: #dc2626; background: #450a0a; }
+        .toast.ok { background: rgba(34,197,94,0.15); color: var(--good); }
+        .toast.err { background: rgba(239,68,68,0.18); color: var(--bad); }
 
-        .product-head { display: grid; grid-template-columns: 200px 1fr; gap: 1.25rem; align-items: start; }
-        @media (max-width: 640px) { .product-head { grid-template-columns: 1fr; } }
-        .hero-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 0.5rem; background: #fff; }
-        .brand { color: var(--accent); font-size: 0.8rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .25rem; }
-        .product-title { font-size: 1.2rem; margin: 0 0 .5rem; }
-        .meta-row { color: var(--muted); font-size: .85rem; display: flex; flex-wrap: wrap; gap: 1rem; }
-        .meta-row strong { color: var(--text); font-weight: 600; }
+        .progress-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        @media (max-width: 720px) { .progress-grid { grid-template-columns: 1fr; } }
+        .progress-card {
+            background: var(--card-2);
+            border-radius: 0.4rem;
+            padding: 0.75rem 0.9rem;
+        }
+        .progress-card h3 {
+            margin: 0 0 0.4rem; font-size: 0.75rem; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .progress-card .big { font-size: 1.3rem; font-weight: 700; }
+        .progress-card .sub { color: var(--muted); font-size: 0.78rem; margin-top: 0.15rem; }
+        .progress-bar-wrap {
+            background: var(--bg-2); height: 6px; border-radius: 3px; margin-top: 0.5rem; overflow: hidden;
+        }
+        .progress-bar { background: var(--accent); height: 100%; transition: width 0.3s; }
 
-        .thumbs { display: flex; gap: .4rem; margin-top: .75rem; flex-wrap: wrap; }
-        .thumbs img { width: 56px; height: 56px; object-fit: cover; border-radius: .3rem; background: #fff; cursor: pointer; opacity: .65; transition: opacity .15s; border: 2px solid transparent; }
-        .thumbs img:hover { opacity: 1; }
-        .thumbs img.active { opacity: 1; border-color: var(--accent); }
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.3rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge.running { background: rgba(251,191,36,0.18); color: var(--warn); }
+        .badge.done    { background: rgba(34,197,94,0.18); color: var(--good); }
+        .badge.error   { background: rgba(239,68,68,0.18); color: var(--bad); }
+        .badge.idle    { background: rgba(148,163,184,0.18); color: var(--muted); }
 
-        .section-title { margin: 1.5rem 0 .75rem; font-size: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+        .log-box {
+            background: #0a0f1f;
+            border: 1px solid var(--border);
+            border-radius: 0.4rem;
+            padding: 0.75rem;
+            height: 320px;
+            overflow-y: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+        .log-line { padding: 1px 0; white-space: pre-wrap; word-break: break-word; }
+        .log-line.error { color: var(--bad); }
+        .log-line.warn { color: var(--warn); }
+        .log-line .ts { color: #4b5e80; margin-right: 0.5rem; }
 
-        .price-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: .5rem; }
-        table { width: 100%; border-collapse: collapse; min-width: 480px; font-size: .9rem; }
-        th, td { padding: .65rem .8rem; text-align: left; border-bottom: 1px solid var(--border); }
-        th { background: var(--card-2); font-weight: 600; color: var(--muted); position: sticky; top: 0; }
-        tbody tr:hover { background: rgba(255,255,255,.03); }
-        td.size-cell { font-weight: 600; }
-        td.price-cell { font-variant-numeric: tabular-nums; white-space: nowrap; }
-        td.price-cell.best { background: var(--best-bg); color: var(--best); font-weight: 700; }
-        td.price-cell.oos { color: var(--muted); font-style: italic; }
-        td.price-cell .badge { font-size: .65rem; background: var(--best); color: #052e16; padding: .1rem .35rem; border-radius: .2rem; margin-left: .3rem; vertical-align: middle; }
+        .data-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.75rem; }
+        .data-tabs button {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 0.35rem 0.8rem;
+            border-radius: 0.3rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .data-tabs button.active { background: var(--card-2); color: var(--text); border-color: var(--accent); }
 
-        .seller-name { display: flex; align-items: center; gap: .35rem; }
-        .seller-name .star { font-size: .75rem; color: var(--muted); font-weight: 400; }
-        .primary-tag { font-size: .6rem; background: var(--accent); color: #fff; padding: .1rem .35rem; border-radius: .2rem; }
+        .table-wrap { overflow-x: auto; max-height: 65vh; border: 1px solid var(--border); border-radius: 0.4rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 1100px; }
+        th, td { padding: 0.45rem 0.6rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        th {
+            background: var(--card-2);
+            color: var(--muted);
+            font-weight: 600;
+            position: sticky; top: 0; z-index: 1;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.04em;
+        }
+        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        td a { color: var(--accent); text-decoration: none; }
+        td a:hover { text-decoration: underline; }
 
-        .empty { color: var(--muted); padding: 1rem; text-align: center; font-style: italic; }
+        .empty { padding: 2rem 1rem; text-align: center; color: var(--muted); }
 
-        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; }
+        .summary-row {
+            display: flex; gap: 1.25rem; flex-wrap: wrap;
+            color: var(--muted); font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        .summary-row strong { color: var(--text); font-size: 1rem; }
+
+        .spinner {
+            display: inline-block; width: 12px; height: 12px;
+            border: 2px solid rgba(255,255,255,0.3); border-top-color: var(--accent);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            vertical-align: middle; margin-right: 0.4rem;
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
-        footer { text-align: center; color: var(--muted); font-size: .75rem; margin-top: 2rem; }
-        a.product-link { color: var(--accent); text-decoration: none; font-size: .8rem; }
-        a.product-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Trendyol Ürün & Satıcı Karşılaştırma</h1>
-        <p class="subtitle">Bir ürün linki yapıştırın — bedenleri ve tüm satıcıların fiyatlarını yan yana görün.</p>
+    <header>
+        <div class="brand">
+            <h1>Trendyol Satıcı Paneli</h1>
+            <span style="font-size:0.75rem;color:var(--muted)" id="db-status"></span>
+        </div>
+        <nav class="tabs">
+            <button data-tab="settings" class="active">Parametreler</button>
+            <button data-tab="ops">İşlemler</button>
+            <button data-tab="data">Veriler</button>
+        </nav>
+    </header>
 
-        <form id="scrape-form">
-            <input
-                type="url"
-                id="url-input"
-                placeholder="https://www.trendyol.com/..."
-                required
-                autofocus
-            />
-            <button type="submit" id="submit-btn">Karşılaştır</button>
-        </form>
+    <main>
+        <!-- ========== Parametreler ========== -->
+        <section id="tab-settings" class="tab-panel active">
+            <div class="card">
+                <h2>Satıcı &amp; API Bağlantısı</h2>
+                <p class="hint">
+                    Bu bilgiler SQLite veritabanına yazılır ve sunucu yeniden başlasa da kalıcıdır
+                    (Railway'de bir Volume bağlamadıysanız restart sonrası sıfırlanabilir).
+                </p>
 
-        <div id="result"></div>
+                <form id="settings-form">
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Satıcı ID (mid)</label>
+                            <input name="seller_id" id="seller_id" type="text" autocomplete="off" placeholder="örn. 123456" required />
+                            <div class="help">Trendyol satıcı paneli URL'inde geçen `mid` veya `supplierId`.</div>
+                        </div>
+                        <div class="field">
+                            <label>Sayfa boyutu</label>
+                            <input name="page_size" id="page_size" type="number" min="10" max="1000" placeholder="200" />
+                            <div class="help">API çağrısı başına kaç ürün çekileceği (10–1000).</div>
+                        </div>
+                        <div class="field">
+                            <label>API Anahtarı (Key)</label>
+                            <input name="api_key" id="api_key" type="text" autocomplete="off" placeholder="apiKey" />
+                        </div>
+                        <div class="field">
+                            <label>API Gizli Anahtarı (Secret)</label>
+                            <input name="api_secret" id="api_secret" type="password" autocomplete="off" placeholder="apiSecret" />
+                            <div class="field-secret-state" id="secret-state"></div>
+                        </div>
+                        <div class="field" style="grid-column: 1 / -1;">
+                            <label>API Base URL (opsiyonel)</label>
+                            <input name="api_base_url" id="api_base_url" type="text" placeholder="https://apigw.trendyol.com/integration" />
+                            <div class="help">Boş bırakılırsa varsayılan kullanılır.</div>
+                        </div>
+                    </div>
 
-        <footer>Railway · Flask · Trendyol açık veri</footer>
-    </div>
+                    <div class="row" style="margin-top: 1rem;">
+                        <button type="submit" class="primary" id="save-settings-btn">Kaydet</button>
+                        <span id="settings-msg"></span>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ========== İşlemler ========== -->
+        <section id="tab-ops" class="tab-panel">
+            <div class="card">
+                <h2>İş Çalıştırma</h2>
+                <p class="hint">
+                    "Çalıştır"a bastığınızda önce <strong>API üzerinden</strong> ürün listesi çekilir,
+                    ardından satıcının tüm ürünleri <strong>Trendyol storefront</strong>'undan taranır.
+                    Sonuçlar Veriler sekmesinde görünür.
+                </p>
+                <div class="row">
+                    <button id="run-btn" class="primary">Çalıştır</button>
+                    <span class="badge idle" id="job-status-badge">BEKLİYOR</span>
+                    <span id="job-id-label" style="color:var(--muted); font-size:0.8rem;"></span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>İlerleme</h2>
+                <div class="progress-grid">
+                    <div class="progress-card">
+                        <h3>API</h3>
+                        <div class="big" id="api-page-text">—</div>
+                        <div class="sub" id="api-count-text">0 kayıt</div>
+                        <div class="progress-bar-wrap"><div class="progress-bar" id="api-bar" style="width:0"></div></div>
+                    </div>
+                    <div class="progress-card">
+                        <h3>Tarama</h3>
+                        <div class="big" id="scrape-page-text">—</div>
+                        <div class="sub" id="scrape-count-text">0 ürün</div>
+                        <div class="progress-bar-wrap"><div class="progress-bar" id="scrape-bar" style="width:0"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Canlı Loglar</h2>
+                <div id="log-box" class="log-box"></div>
+            </div>
+        </section>
+
+        <!-- ========== Veriler ========== -->
+        <section id="tab-data" class="tab-panel">
+            <div class="card">
+                <div class="data-tabs">
+                    <button data-data-tab="api" class="active">API Verileri</button>
+                    <button data-data-tab="scrape">Tarama Verileri</button>
+                </div>
+
+                <!-- API DATA -->
+                <div id="data-api" class="data-subpanel">
+                    <div class="summary-row">
+                        <span><strong id="api-total">0</strong> kayıt</span>
+                        <button class="primary" id="reload-api-btn" style="padding:0.4rem 0.8rem;font-size:0.8rem;">Yenile</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table id="api-table">
+                            <thead>
+                                <tr>
+                                    <th>Ürün ID</th>
+                                    <th>Ana Ürün ID</th>
+                                    <th>Barkod</th>
+                                    <th>Model</th>
+                                    <th>Renk</th>
+                                    <th>Beden</th>
+                                    <th>Kategori</th>
+                                    <th>Marka</th>
+                                    <th>Satıcı Kodu</th>
+                                    <th class="num">Stok</th>
+                                    <th class="num">KDV</th>
+                                    <th class="num">İlk Fiyat</th>
+                                    <th class="num">İndirimli</th>
+                                    <th>Satışta?</th>
+                                    <th>Arşiv?</th>
+                                    <th>Kilitli?</th>
+                                    <th>Kilit Nedeni</th>
+                                </tr>
+                            </thead>
+                            <tbody><tr><td colspan="17" class="empty">Henüz veri yok. İşlemler sekmesinden çalıştırın.</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SCRAPE DATA -->
+                <div id="data-scrape" class="data-subpanel" style="display:none;">
+                    <div class="summary-row">
+                        <span><strong id="scrape-total">0</strong> kayıt</span>
+                        <button class="primary" id="reload-scrape-btn" style="padding:0.4rem 0.8rem;font-size:0.8rem;">Yenile</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table id="scrape-table">
+                            <thead>
+                                <tr>
+                                    <th>Ana Ürün ID</th>
+                                    <th>Ürün Linki</th>
+                                    <th>Ürün Adı</th>
+                                    <th class="num">Üstü Çizili</th>
+                                    <th class="num">İndirimli</th>
+                                    <th class="num">TY Plus</th>
+                                    <th class="num">Favori</th>
+                                    <th class="num">Yorum</th>
+                                    <th class="num">Puan</th>
+                                    <th>Model</th>
+                                    <th>Renk</th>
+                                    <th>Kategori</th>
+                                    <th>Marka</th>
+                                </tr>
+                            </thead>
+                            <tbody><tr><td colspan="13" class="empty">Henüz veri yok. İşlemler sekmesinden çalıştırın.</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
 
     <script>
-        const form = document.getElementById('scrape-form');
-        const input = document.getElementById('url-input');
-        const btn = document.getElementById('submit-btn');
-        const resultEl = document.getElementById('result');
+        // ---------- Tab navigation ----------
+        const tabs = document.querySelectorAll('nav.tabs button');
+        tabs.forEach(btn => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
 
-        const fmtPrice = (v, c = 'TRY') =>
-            v == null ? '—' : new Intl.NumberFormat('tr-TR', { style: 'currency', currency: c, maximumFractionDigits: 2 }).format(v);
-
-        function buildPriceTable(d) {
-            const sellers = [];
-            if (d.primarySeller) sellers.push(d.primarySeller);
-            sellers.push(...(d.otherSellers || []));
-
-            const sizes = d.sizes && d.sizes.length ? d.sizes : ['Tek beden'];
-
-            // index variants by (sellerIdx, size)
-            const matrix = {};
-            sellers.forEach((s, i) => {
-                (s.variants || []).forEach(v => {
-                    const key = `${i}|${v.size || 'Tek beden'}`;
-                    matrix[key] = v;
-                });
-            });
-
-            // find min price per row
-            const rowMin = {};
-            sizes.forEach(size => {
-                let m = Infinity;
-                sellers.forEach((s, i) => {
-                    const v = matrix[`${i}|${size}`];
-                    if (v && v.inStock && v.price != null && v.price < m) m = v.price;
-                });
-                rowMin[size] = m === Infinity ? null : m;
-            });
-
-            const head = `<tr><th>Beden</th>${sellers.map(s => `
-                <th>
-                    <div class="seller-name">
-                        ${s.name || '—'}
-                        ${s.isPrimary ? '<span class="primary-tag">ANA</span>' : ''}
-                        ${s.score != null ? `<span class="star">★ ${s.score.toFixed(1)}</span>` : ''}
-                    </div>
-                </th>`).join('')}</tr>`;
-
-            const body = sizes.map(size => {
-                const cells = sellers.map((s, i) => {
-                    const v = matrix[`${i}|${size}`];
-                    if (!v) return '<td class="price-cell oos">satılmıyor</td>';
-                    if (!v.inStock) return '<td class="price-cell oos">stokta yok</td>';
-                    const isBest = v.price != null && rowMin[size] === v.price && sellers.length > 1;
-                    const cls = isBest ? 'price-cell best' : 'price-cell';
-                    const badge = isBest ? '<span class="badge">EN UYGUN</span>' : '';
-                    return `<td class="${cls}">${fmtPrice(v.price, v.currency || d.currency)}${badge}</td>`;
-                }).join('');
-                return `<tr><td class="size-cell">${size}</td>${cells}</tr>`;
-            }).join('');
-
-            return `<div class="price-table-wrap"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+        function activateTab(name) {
+            tabs.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${name}`));
+            if (name === 'data') { reloadApi(); reloadScrape(); }
         }
 
-        form.addEventListener('submit', async (e) => {
+        // ---------- Settings ----------
+        async function loadSettings() {
+            const res = await fetch('/api/settings');
+            const json = await res.json();
+            const s = json.data || {};
+            document.getElementById('seller_id').value = s.seller_id || '';
+            document.getElementById('api_key').value = s.api_key || '';
+            document.getElementById('api_base_url').value = s.api_base_url || '';
+            document.getElementById('page_size').value = s.page_size || '';
+            const secretState = document.getElementById('secret-state');
+            secretState.textContent = s.api_secret_present ? 'Mevcut (değiştirmek için yeniden girin)' : '';
+        }
+
+        document.getElementById('settings-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const url = input.value.trim();
-            if (!url) return;
-
+            const btn = document.getElementById('save-settings-btn');
+            const msg = document.getElementById('settings-msg');
+            const payload = {
+                seller_id: document.getElementById('seller_id').value.trim(),
+                api_key: document.getElementById('api_key').value.trim(),
+                api_secret: document.getElementById('api_secret').value,
+                api_base_url: document.getElementById('api_base_url').value.trim(),
+                page_size: document.getElementById('page_size').value.trim(),
+            };
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span>';
-            resultEl.innerHTML = '';
-
+            msg.innerHTML = '';
             try {
-                const res = await fetch('/api/scrape', {
+                const r = await fetch('/api/settings', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url }),
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload),
                 });
-                const json = await res.json();
-
-                if (!json.ok) {
-                    resultEl.innerHTML = `<div class="result error">${json.error}</div>`;
-                    return;
+                const j = await r.json();
+                if (j.ok) {
+                    msg.innerHTML = '<span class="toast ok">Kaydedildi.</span>';
+                    document.getElementById('api_secret').value = '';
+                    loadSettings();
+                } else {
+                    msg.innerHTML = `<span class="toast err">${j.error || 'Hata'}</span>`;
                 }
-
-                const d = json.data;
-                const heroSrc = (d.images && d.images[0]) || '';
-                const totalSellers = (d.primarySeller ? 1 : 0) + (d.otherSellers || []).length;
-
-                const thumbs = (d.images || []).slice(0, 8).map((src, i) => `
-                    <img src="${src}" alt="" loading="lazy" data-idx="${i}" class="${i === 0 ? 'active' : ''}" onerror="this.style.display='none'" />
-                `).join('');
-
-                resultEl.innerHTML = `
-                    <div class="result">
-                        <div class="product-head">
-                            <div>
-                                <img id="hero" class="hero-img" src="${heroSrc}" alt="" onerror="this.style.display='none'" />
-                                <div class="thumbs" id="thumbs">${thumbs}</div>
-                            </div>
-                            <div>
-                                ${d.brand ? `<div class="brand">${d.brand}</div>` : ''}
-                                <h2 class="product-title">${d.title || 'Ürün'}</h2>
-                                <div class="meta-row">
-                                    ${d.rating != null ? `<span><strong>★ ${d.rating.toFixed(1)}</strong> (${(d.ratingCount || 0).toLocaleString('tr-TR')} değerlendirme)</span>` : ''}
-                                    <span><strong>${totalSellers}</strong> satıcı</span>
-                                    <span><strong>${(d.sizes || []).length || 1}</strong> beden</span>
-                                </div>
-                                <div style="margin-top:.5rem"><a class="product-link" href="${d.url}" target="_blank" rel="noopener">Trendyol'da aç ↗</a></div>
-                            </div>
-                        </div>
-
-                        <h3 class="section-title">Beden bazlı satıcı fiyatları</h3>
-                        ${totalSellers === 0 ? '<div class="empty">Satıcı bilgisi okunamadı.</div>' : buildPriceTable(d)}
-                    </div>
-                `;
-
-                // thumb click
-                const hero = document.getElementById('hero');
-                document.querySelectorAll('#thumbs img').forEach(img => {
-                    img.addEventListener('click', () => {
-                        hero.src = img.src;
-                        document.querySelectorAll('#thumbs img').forEach(i => i.classList.remove('active'));
-                        img.classList.add('active');
-                    });
-                });
             } catch (err) {
-                resultEl.innerHTML = `<div class="result error">Bağlantı hatası: ${err.message}</div>`;
+                msg.innerHTML = `<span class="toast err">${err.message}</span>`;
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Karşılaştır';
+                setTimeout(() => msg.innerHTML = '', 3000);
             }
         });
+
+        // ---------- Job ----------
+        let pollTimer = null;
+        let lastLogId = 0;
+        let activeJobId = null;
+
+        document.getElementById('run-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('run-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Başlatılıyor...';
+            try {
+                const r = await fetch('/api/jobs/start', {method: 'POST'});
+                const j = await r.json();
+                if (!j.ok) {
+                    alert(j.error || 'İş başlatılamadı.');
+                    return;
+                }
+                activeJobId = j.job_id;
+                lastLogId = 0;
+                document.getElementById('log-box').innerHTML = '';
+                startPolling();
+            } catch (err) {
+                alert('Bağlantı hatası: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Çalıştır';
+            }
+        });
+
+        function startPolling() {
+            if (pollTimer) clearInterval(pollTimer);
+            pollTimer = setInterval(pollStatus, 1500);
+            pollStatus();
+        }
+
+        async function pollStatus() {
+            const url = activeJobId
+                ? `/api/jobs/status?id=${activeJobId}&after_log_id=${lastLogId}`
+                : `/api/jobs/status?after_log_id=${lastLogId}`;
+            try {
+                const r = await fetch(url);
+                const j = await r.json();
+                if (!j.ok || !j.data) return;
+                renderJob(j.data, j.logs || [], j.running);
+                if (!j.running) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+            } catch (err) { /* keep polling */ }
+        }
+
+        function renderJob(job, logs, running) {
+            activeJobId = job.id;
+            document.getElementById('job-id-label').textContent = `İş #${job.id} • ${job.started_at || ''}`;
+            const badge = document.getElementById('job-status-badge');
+            badge.classList.remove('idle', 'running', 'done', 'error');
+            if (running) {
+                badge.textContent = 'ÇALIŞIYOR';
+                badge.classList.add('running');
+            } else if (job.status === 'done') {
+                badge.textContent = 'TAMAM';
+                badge.classList.add('done');
+            } else if (job.status === 'error') {
+                badge.textContent = 'HATA';
+                badge.classList.add('error');
+            } else {
+                badge.textContent = (job.status || 'BEKLİYOR').toUpperCase();
+                badge.classList.add('idle');
+            }
+
+            const apiPage = job.api_page || 0;
+            const apiTotal = job.api_total_pages || 0;
+            document.getElementById('api-page-text').textContent =
+                apiTotal ? `${apiPage} / ${apiTotal}` : (apiPage ? `${apiPage}` : '—');
+            document.getElementById('api-count-text').textContent = `${job.api_count || 0} kayıt`;
+            document.getElementById('api-bar').style.width =
+                apiTotal ? Math.min(100, (apiPage / apiTotal) * 100) + '%' : '0';
+
+            const sPage = job.scrape_page || 0;
+            const sTotal = job.scrape_total_pages || 0;
+            document.getElementById('scrape-page-text').textContent =
+                sTotal ? `${sPage} / ${sTotal}` : (sPage ? `${sPage}` : '—');
+            document.getElementById('scrape-count-text').textContent = `${job.scrape_count || 0} ürün`;
+            document.getElementById('scrape-bar').style.width =
+                sTotal ? Math.min(100, (sPage / sTotal) * 100) + '%' : '0';
+
+            const box = document.getElementById('log-box');
+            const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
+            for (const l of logs) {
+                const div = document.createElement('div');
+                div.className = `log-line ${l.level || 'info'}`;
+                div.innerHTML = `<span class="ts">${(l.ts || '').slice(11, 19)}</span>${escapeHtml(l.message)}`;
+                box.appendChild(div);
+                if (l.id > lastLogId) lastLogId = l.id;
+            }
+            if (wasAtBottom) box.scrollTop = box.scrollHeight;
+        }
+
+        // ---------- Data tables ----------
+        document.querySelectorAll('.data-tabs button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.data-tabs button').forEach(b => b.classList.toggle('active', b === btn));
+                const which = btn.dataset.dataTab;
+                document.getElementById('data-api').style.display = which === 'api' ? 'block' : 'none';
+                document.getElementById('data-scrape').style.display = which === 'scrape' ? 'block' : 'none';
+            });
+        });
+        document.getElementById('reload-api-btn').addEventListener('click', reloadApi);
+        document.getElementById('reload-scrape-btn').addEventListener('click', reloadScrape);
+
+        async function reloadApi() {
+            const r = await fetch('/api/data/api-products?limit=2000');
+            const j = await r.json();
+            if (!j.ok) return;
+            document.getElementById('api-total').textContent = (j.total || 0).toLocaleString('tr-TR');
+            const tbody = document.querySelector('#api-table tbody');
+            if (!j.data.length) {
+                tbody.innerHTML = '<tr><td colspan="17" class="empty">Veri yok.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = j.data.map(r => `
+                <tr>
+                    <td>${escapeHtml(r.product_id)}</td>
+                    <td>${escapeHtml(r.product_main_id)}</td>
+                    <td>${escapeHtml(r.barcode)}</td>
+                    <td>${escapeHtml(r.model)}</td>
+                    <td>${escapeHtml(r.color)}</td>
+                    <td>${escapeHtml(r.size)}</td>
+                    <td>${escapeHtml(r.category)}</td>
+                    <td>${escapeHtml(r.brand)}</td>
+                    <td>${escapeHtml(r.seller_code)}</td>
+                    <td class="num">${num(r.stock)}</td>
+                    <td class="num">${pct(r.vat_rate)}</td>
+                    <td class="num">${money(r.list_price)}</td>
+                    <td class="num">${money(r.sale_price)}</td>
+                    <td>${bool(r.on_sale)}</td>
+                    <td>${bool(r.archived)}</td>
+                    <td>${bool(r.locked)}</td>
+                    <td>${escapeHtml(r.lock_reason)}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function reloadScrape() {
+            const r = await fetch('/api/data/scraped-products?limit=2000');
+            const j = await r.json();
+            if (!j.ok) return;
+            document.getElementById('scrape-total').textContent = (j.total || 0).toLocaleString('tr-TR');
+            const tbody = document.querySelector('#scrape-table tbody');
+            if (!j.data.length) {
+                tbody.innerHTML = '<tr><td colspan="13" class="empty">Veri yok.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = j.data.map(r => `
+                <tr>
+                    <td>${escapeHtml(r.product_main_id)}</td>
+                    <td><a href="${escapeAttr(r.product_url)}" target="_blank" rel="noopener">aç ↗</a></td>
+                    <td>${escapeHtml(r.product_name)}</td>
+                    <td class="num">${money(r.strike_price)}</td>
+                    <td class="num">${money(r.sale_price)}</td>
+                    <td class="num">${money(r.ty_plus_price)}</td>
+                    <td class="num">${num(r.fav_count)}</td>
+                    <td class="num">${num(r.review_count)}</td>
+                    <td class="num">${r.rating != null ? r.rating.toFixed(1) : '—'}</td>
+                    <td>${escapeHtml(r.api_model)}</td>
+                    <td>${escapeHtml(r.api_color)}</td>
+                    <td>${escapeHtml(r.api_category)}</td>
+                    <td>${escapeHtml(r.api_brand)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ---------- helpers ----------
+        function escapeHtml(s) {
+            if (s === null || s === undefined || s === '') return '<span style="color:#475569">—</span>';
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function escapeAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
+        function num(v) { return v == null ? '—' : Number(v).toLocaleString('tr-TR'); }
+        function money(v) {
+            if (v == null) return '—';
+            return new Intl.NumberFormat('tr-TR', {style:'currency', currency:'TRY', maximumFractionDigits:2}).format(v);
+        }
+        function pct(v) { return v == null ? '—' : `%${Number(v).toFixed(0)}`; }
+        function bool(v) {
+            if (v === null || v === undefined || v === '') return '—';
+            return v ? '<span style="color:var(--good)">✓</span>' : '<span style="color:var(--bad)">✗</span>';
+        }
+
+        // ---------- init ----------
+        loadSettings();
+        // Resume polling if a job is currently running
+        pollStatus();
     </script>
 </body>
 </html>
