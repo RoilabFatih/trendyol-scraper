@@ -24,6 +24,36 @@ def healthz():
     return {"status": "ok"}, 200
 
 
+@app.route("/api/_debug/storage")
+def debug_storage():
+    """Diagnostic endpoint: report DB path / volume mount visibility."""
+    info = {
+        "env_DATABASE_PATH": os.environ.get("DATABASE_PATH"),
+        "module_DB_PATH": db.DB_PATH,
+        "cwd": os.getcwd(),
+    }
+    for path in ("/data", os.path.dirname(os.path.abspath(db.DB_PATH))):
+        try:
+            stat = os.statvfs(path) if hasattr(os, "statvfs") else None
+            info[path] = {
+                "exists": os.path.exists(path),
+                "is_dir": os.path.isdir(path),
+                "is_mount": os.path.ismount(path),
+                "writable": os.access(path, os.W_OK) if os.path.exists(path) else False,
+                "contents": (os.listdir(path) if os.path.isdir(path) else None),
+                "free_mb": (stat.f_bavail * stat.f_frsize / (1024 * 1024)) if stat else None,
+            }
+        except Exception as exc:  # noqa: BLE001
+            info[path] = {"error": str(exc)}
+    info["db_file_exists"] = os.path.exists(db.DB_PATH)
+    if info["db_file_exists"]:
+        try:
+            info["db_file_size"] = os.path.getsize(db.DB_PATH)
+        except OSError:
+            pass
+    return info
+
+
 # ---------------- single product (legacy) ----------------
 
 @app.route("/api/scrape", methods=["POST"])
