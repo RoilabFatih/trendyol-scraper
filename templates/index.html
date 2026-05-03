@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trendyol Ürün Bilgisi</title>
+    <title>Trendyol Ürün & Satıcı Karşılaştırma</title>
     <style>
         :root {
             --bg: #0f172a;
             --card: #1e293b;
+            --card-2: #273449;
             --accent: #f97316;
             --accent-hover: #ea580c;
+            --best: #22c55e;
+            --best-bg: rgba(34,197,94,.12);
             --text: #f1f5f9;
             --muted: #94a3b8;
             --border: #334155;
@@ -21,13 +24,13 @@
             background: linear-gradient(135deg, var(--bg) 0%, #1e1b4b 100%);
             color: var(--text);
             min-height: 100vh;
-            padding: 2rem 1rem;
+            padding: 1.5rem 1rem 3rem;
         }
-        .container { max-width: 720px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
         h1 {
             text-align: center;
-            font-size: 1.8rem;
-            margin: 0 0 0.5rem;
+            font-size: 1.7rem;
+            margin: 0 0 0.4rem;
             background: linear-gradient(90deg, #f97316, #fbbf24);
             -webkit-background-clip: text;
             background-clip: text;
@@ -36,8 +39,8 @@
         .subtitle {
             text-align: center;
             color: var(--muted);
-            margin-bottom: 2rem;
-            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
         }
         form {
             display: flex;
@@ -53,7 +56,6 @@
             color: var(--text);
             font-size: 1rem;
             outline: none;
-            transition: border 0.2s;
         }
         input[type="url"]:focus { border-color: var(--accent); }
         button {
@@ -65,10 +67,10 @@
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s;
         }
         button:hover:not(:disabled) { background: var(--accent-hover); }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
+
         .result {
             background: var(--card);
             border: 1px solid var(--border);
@@ -76,79 +78,51 @@
             padding: 1.5rem;
             margin-top: 1rem;
         }
-        .result.error {
-            border-color: #dc2626;
-            background: #450a0a;
-        }
-        .product-title {
-            font-size: 1.25rem;
-            margin: 0 0 0.5rem;
-        }
-        .brand {
-            color: var(--accent);
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .price {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #fbbf24;
-            margin: 1rem 0;
-        }
-        .price .original {
-            font-size: 1rem;
-            color: var(--muted);
-            text-decoration: line-through;
-            margin-left: 0.75rem;
-            font-weight: 400;
-        }
-        .meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 0.75rem;
-            margin: 1rem 0;
-            font-size: 0.9rem;
-        }
-        .meta div {
-            background: rgba(255,255,255,0.03);
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.4rem;
-        }
-        .meta strong { color: var(--muted); display: block; font-size: 0.75rem; margin-bottom: 0.2rem; }
-        .images {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-        .images img {
-            width: 100%;
-            aspect-ratio: 1;
-            object-fit: cover;
-            border-radius: 0.4rem;
-            background: #fff;
-        }
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            vertical-align: middle;
-        }
+        .result.error { border-color: #dc2626; background: #450a0a; }
+
+        .product-head { display: grid; grid-template-columns: 200px 1fr; gap: 1.25rem; align-items: start; }
+        @media (max-width: 640px) { .product-head { grid-template-columns: 1fr; } }
+        .hero-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 0.5rem; background: #fff; }
+        .brand { color: var(--accent); font-size: 0.8rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .25rem; }
+        .product-title { font-size: 1.2rem; margin: 0 0 .5rem; }
+        .meta-row { color: var(--muted); font-size: .85rem; display: flex; flex-wrap: wrap; gap: 1rem; }
+        .meta-row strong { color: var(--text); font-weight: 600; }
+
+        .thumbs { display: flex; gap: .4rem; margin-top: .75rem; flex-wrap: wrap; }
+        .thumbs img { width: 56px; height: 56px; object-fit: cover; border-radius: .3rem; background: #fff; cursor: pointer; opacity: .65; transition: opacity .15s; border: 2px solid transparent; }
+        .thumbs img:hover { opacity: 1; }
+        .thumbs img.active { opacity: 1; border-color: var(--accent); }
+
+        .section-title { margin: 1.5rem 0 .75rem; font-size: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+        .price-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: .5rem; }
+        table { width: 100%; border-collapse: collapse; min-width: 480px; font-size: .9rem; }
+        th, td { padding: .65rem .8rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--card-2); font-weight: 600; color: var(--muted); position: sticky; top: 0; }
+        tbody tr:hover { background: rgba(255,255,255,.03); }
+        td.size-cell { font-weight: 600; }
+        td.price-cell { font-variant-numeric: tabular-nums; white-space: nowrap; }
+        td.price-cell.best { background: var(--best-bg); color: var(--best); font-weight: 700; }
+        td.price-cell.oos { color: var(--muted); font-style: italic; }
+        td.price-cell .badge { font-size: .65rem; background: var(--best); color: #052e16; padding: .1rem .35rem; border-radius: .2rem; margin-left: .3rem; vertical-align: middle; }
+
+        .seller-name { display: flex; align-items: center; gap: .35rem; }
+        .seller-name .star { font-size: .75rem; color: var(--muted); font-weight: 400; }
+        .primary-tag { font-size: .6rem; background: var(--accent); color: #fff; padding: .1rem .35rem; border-radius: .2rem; }
+
+        .empty { color: var(--muted); padding: 1rem; text-align: center; font-style: italic; }
+
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 2rem; }
-        .description { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+        footer { text-align: center; color: var(--muted); font-size: .75rem; margin-top: 2rem; }
+        a.product-link { color: var(--accent); text-decoration: none; font-size: .8rem; }
+        a.product-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Trendyol Ürün Bilgisi</h1>
-        <p class="subtitle">Bir Trendyol ürün linki yapıştırın, anında bilgileri alın.</p>
+        <h1>Trendyol Ürün & Satıcı Karşılaştırma</h1>
+        <p class="subtitle">Bir ürün linki yapıştırın — bedenleri ve tüm satıcıların fiyatlarını yan yana görün.</p>
 
         <form id="scrape-form">
             <input
@@ -158,23 +132,74 @@
                 required
                 autofocus
             />
-            <button type="submit" id="submit-btn">Çek</button>
+            <button type="submit" id="submit-btn">Karşılaştır</button>
         </form>
 
         <div id="result"></div>
 
-        <footer>Railway üzerinde dağıtıldı · Flask + Python</footer>
+        <footer>Railway · Flask · Trendyol açık veri</footer>
     </div>
 
     <script>
         const form = document.getElementById('scrape-form');
         const input = document.getElementById('url-input');
         const btn = document.getElementById('submit-btn');
-        const result = document.getElementById('result');
+        const resultEl = document.getElementById('result');
 
-        const fmtPrice = (v, c) => v == null ? '—' : new Intl.NumberFormat('tr-TR', {
-            style: 'currency', currency: c || 'TRY'
-        }).format(v);
+        const fmtPrice = (v, c = 'TRY') =>
+            v == null ? '—' : new Intl.NumberFormat('tr-TR', { style: 'currency', currency: c, maximumFractionDigits: 2 }).format(v);
+
+        function buildPriceTable(d) {
+            const sellers = [];
+            if (d.primarySeller) sellers.push(d.primarySeller);
+            sellers.push(...(d.otherSellers || []));
+
+            const sizes = d.sizes && d.sizes.length ? d.sizes : ['Tek beden'];
+
+            // index variants by (sellerIdx, size)
+            const matrix = {};
+            sellers.forEach((s, i) => {
+                (s.variants || []).forEach(v => {
+                    const key = `${i}|${v.size || 'Tek beden'}`;
+                    matrix[key] = v;
+                });
+            });
+
+            // find min price per row
+            const rowMin = {};
+            sizes.forEach(size => {
+                let m = Infinity;
+                sellers.forEach((s, i) => {
+                    const v = matrix[`${i}|${size}`];
+                    if (v && v.inStock && v.price != null && v.price < m) m = v.price;
+                });
+                rowMin[size] = m === Infinity ? null : m;
+            });
+
+            const head = `<tr><th>Beden</th>${sellers.map(s => `
+                <th>
+                    <div class="seller-name">
+                        ${s.name || '—'}
+                        ${s.isPrimary ? '<span class="primary-tag">ANA</span>' : ''}
+                        ${s.score != null ? `<span class="star">★ ${s.score.toFixed(1)}</span>` : ''}
+                    </div>
+                </th>`).join('')}</tr>`;
+
+            const body = sizes.map(size => {
+                const cells = sellers.map((s, i) => {
+                    const v = matrix[`${i}|${size}`];
+                    if (!v) return '<td class="price-cell oos">satılmıyor</td>';
+                    if (!v.inStock) return '<td class="price-cell oos">stokta yok</td>';
+                    const isBest = v.price != null && rowMin[size] === v.price && sellers.length > 1;
+                    const cls = isBest ? 'price-cell best' : 'price-cell';
+                    const badge = isBest ? '<span class="badge">EN UYGUN</span>' : '';
+                    return `<td class="${cls}">${fmtPrice(v.price, v.currency || d.currency)}${badge}</td>`;
+                }).join('');
+                return `<tr><td class="size-cell">${size}</td>${cells}</tr>`;
+            }).join('');
+
+            return `<div class="price-table-wrap"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+        }
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -183,7 +208,7 @@
 
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner"></span>';
-            result.innerHTML = '';
+            resultEl.innerHTML = '';
 
             try {
                 const res = await fetch('/api/scrape', {
@@ -194,40 +219,56 @@
                 const json = await res.json();
 
                 if (!json.ok) {
-                    result.innerHTML = `<div class="result error">${json.error}</div>`;
+                    resultEl.innerHTML = `<div class="result error">${json.error}</div>`;
                     return;
                 }
 
                 const d = json.data;
-                const images = (d.images || []).map(src =>
-                    `<img src="${src}" alt="" loading="lazy" onerror="this.style.display='none'" />`
-                ).join('');
+                const heroSrc = (d.images && d.images[0]) || '';
+                const totalSellers = (d.primarySeller ? 1 : 0) + (d.otherSellers || []).length;
 
-                result.innerHTML = `
+                const thumbs = (d.images || []).slice(0, 8).map((src, i) => `
+                    <img src="${src}" alt="" loading="lazy" data-idx="${i}" class="${i === 0 ? 'active' : ''}" onerror="this.style.display='none'" />
+                `).join('');
+
+                resultEl.innerHTML = `
                     <div class="result">
-                        ${d.brand ? `<div class="brand">${d.brand}</div>` : ''}
-                        <h2 class="product-title">${d.title || 'Ürün'}</h2>
-                        <div class="price">
-                            ${fmtPrice(d.price, d.currency)}
-                            ${d.originalPrice && d.originalPrice !== d.price
-                                ? `<span class="original">${fmtPrice(d.originalPrice, d.currency)}</span>`
-                                : ''}
+                        <div class="product-head">
+                            <div>
+                                <img id="hero" class="hero-img" src="${heroSrc}" alt="" onerror="this.style.display='none'" />
+                                <div class="thumbs" id="thumbs">${thumbs}</div>
+                            </div>
+                            <div>
+                                ${d.brand ? `<div class="brand">${d.brand}</div>` : ''}
+                                <h2 class="product-title">${d.title || 'Ürün'}</h2>
+                                <div class="meta-row">
+                                    ${d.rating != null ? `<span><strong>★ ${d.rating.toFixed(1)}</strong> (${(d.ratingCount || 0).toLocaleString('tr-TR')} değerlendirme)</span>` : ''}
+                                    <span><strong>${totalSellers}</strong> satıcı</span>
+                                    <span><strong>${(d.sizes || []).length || 1}</strong> beden</span>
+                                </div>
+                                <div style="margin-top:.5rem"><a class="product-link" href="${d.url}" target="_blank" rel="noopener">Trendyol'da aç ↗</a></div>
+                            </div>
                         </div>
-                        ${d.description ? `<p class="description">${d.description}</p>` : ''}
-                        <div class="meta">
-                            ${d.category ? `<div><strong>Kategori</strong>${d.category}</div>` : ''}
-                            ${d.rating ? `<div><strong>Puan</strong>${d.rating.toFixed(1)} ★</div>` : ''}
-                            ${d.ratingCount ? `<div><strong>Değerlendirme</strong>${d.ratingCount.toLocaleString('tr-TR')}</div>` : ''}
-                            ${d.id ? `<div><strong>Ürün ID</strong>${d.id}</div>` : ''}
-                        </div>
-                        ${images ? `<div class="images">${images}</div>` : ''}
+
+                        <h3 class="section-title">Beden bazlı satıcı fiyatları</h3>
+                        ${totalSellers === 0 ? '<div class="empty">Satıcı bilgisi okunamadı.</div>' : buildPriceTable(d)}
                     </div>
                 `;
+
+                // thumb click
+                const hero = document.getElementById('hero');
+                document.querySelectorAll('#thumbs img').forEach(img => {
+                    img.addEventListener('click', () => {
+                        hero.src = img.src;
+                        document.querySelectorAll('#thumbs img').forEach(i => i.classList.remove('active'));
+                        img.classList.add('active');
+                    });
+                });
             } catch (err) {
-                result.innerHTML = `<div class="result error">Bağlantı hatası: ${err.message}</div>`;
+                resultEl.innerHTML = `<div class="result error">Bağlantı hatası: ${err.message}</div>`;
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Çek';
+                btn.textContent = 'Karşılaştır';
             }
         });
     </script>
