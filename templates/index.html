@@ -299,8 +299,15 @@
                 <div class="row">
                     <button id="run-btn" class="primary">Çalıştır</button>
                     <span class="badge idle" id="job-status-badge">BEKLİYOR</span>
+                    <span id="worker-badge" class="badge idle" title="Yerel ajan durumu">YEREL AJAN: ?</span>
                     <span id="job-id-label" style="color:var(--muted); font-size:0.8rem;"></span>
                 </div>
+                <p class="hint" style="margin-top:.6rem;">
+                    <strong>Akış:</strong> Çalıştır basıldığında Railway önce API ürünlerini çeker,
+                    ardından tarama aşaması için <strong>senin makinendeki yerel ajan</strong>ı bekler.
+                    Ajanı başlatmak için: depo klasöründe <code>start_worker.bat</code> dosyasına çift tıkla
+                    ve pencereyi açık bırak.
+                </p>
             </div>
 
             <div class="card">
@@ -503,7 +510,7 @@
                 const r = await fetch(url);
                 const j = await r.json();
                 if (!j.ok || !j.data) return;
-                renderJob(j.data, j.logs || [], j.running);
+                renderJob(j.data, j.logs || [], j.running, j.worker);
                 if (!j.running) {
                     clearInterval(pollTimer);
                     pollTimer = null;
@@ -511,23 +518,37 @@
             } catch (err) { /* keep polling */ }
         }
 
-        function renderJob(job, logs, running) {
+        function renderJob(job, logs, running, worker) {
             activeJobId = job.id;
             document.getElementById('job-id-label').textContent = `İş #${job.id} • ${job.started_at || ''}`;
             const badge = document.getElementById('job-status-badge');
             badge.classList.remove('idle', 'running', 'done', 'error');
-            if (running) {
-                badge.textContent = 'ÇALIŞIYOR';
-                badge.classList.add('running');
-            } else if (job.status === 'done') {
-                badge.textContent = 'TAMAM';
-                badge.classList.add('done');
-            } else if (job.status === 'error') {
-                badge.textContent = 'HATA';
-                badge.classList.add('error');
+            const labels = {
+                'awaiting_local_scrape': 'YEREL AJAN BEKLENİYOR',
+                'scraping_local': 'YEREL AJAN ÇALIŞIYOR',
+                'running': 'API ÇEKİLİYOR',
+                'done': 'TAMAM',
+                'error': 'HATA',
+            };
+            const text = labels[job.status] || (job.status || 'BEKLİYOR').toUpperCase();
+            badge.textContent = text;
+            if (job.status === 'done') badge.classList.add('done');
+            else if (job.status === 'error') badge.classList.add('error');
+            else if (running) badge.classList.add('running');
+            else badge.classList.add('idle');
+
+            const wb = document.getElementById('worker-badge');
+            wb.classList.remove('idle', 'running', 'done', 'error');
+            if (worker && worker.online) {
+                wb.textContent = 'YEREL AJAN: BAĞLI';
+                wb.classList.add('done');
+                wb.title = `Son: ${worker.last_seen} (${worker.id})`;
             } else {
-                badge.textContent = (job.status || 'BEKLİYOR').toUpperCase();
-                badge.classList.add('idle');
+                wb.textContent = 'YEREL AJAN: KAPALI';
+                wb.classList.add('error');
+                wb.title = worker && worker.last_seen
+                    ? `En son ${worker.last_seen} görüldü — şu an kapalı.`
+                    : 'Henüz hiç bağlanmadı. start_worker.bat\'ı çalıştır.';
             }
 
             const apiPage = job.api_page || 0;

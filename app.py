@@ -159,12 +159,103 @@ def job_status():
         return jsonify({"ok": False, "error": "İş bulunamadı."}), 404
     after_id = request.args.get("after_log_id", default=0, type=int)
     logs = db.get_logs(job_id, after_id=after_id, limit=200)
+    hb = db.latest_heartbeat()
+    worker_online = False
+    if hb:
+        from datetime import datetime, timezone
+        try:
+            last = datetime.fromisoformat(hb["last_seen"])
+            worker_online = (datetime.now(timezone.utc) - last).total_seconds() < 30
+        except Exception:
+            pass
+    job_running = (
+        (job_runner.is_running() and job_runner.active_job_id() == job_id)
+        or (job.get("status") in ("running", "awaiting_local_scrape", "scraping_local"))
+    )
     return jsonify({
         "ok": True,
         "data": job,
         "logs": logs,
-        "running": job_runner.is_running() and job_runner.active_job_id() == job_id,
+        "running": job_running,
+        "worker": {
+            "online": worker_online,
+            "last_seen": hb["last_seen"] if hb else None,
+            "id": hb["worker_id"] if hb else None,
+        },
     })
+
+
+# ---------------- worker dispatch ----------------
+
+@app.route("/api/worker/heartbeat", methods=["POST"])
+def worker_heartbeat():
+    payload = request.get_json(silent=True) or {}
+    worker_id = (payload.get("worker_id") or "").strip()
+    if not worker_id:
+        return jsonify({"ok": False, "error": "worker_id zorunlu."}), 400
+    db.heartbeat(worker_id, info=payload.get("info"))
+    return jsonify({"ok": True})
+
+
+@app.route("/api/worker/scrape-pending")
+def worker_scrape_pending():
+    job = db.find_pending_scrape_job()
+    if not job:
+        return jsonify({"ok": True, "data": None})
+    settings = db.get_settings()
+    return jsonify({
+        "ok": True,
+        "data": {
+            "job_id": job["id"],
+            "seller_id": settings.get("seller_id"),
+            "page_size": settings.get("page_size"),
+            "started_at": job.get("started_at"),
+        },
+    })
+
+
+@app.route("/api/worker/scrape-claim/<int:job_id>", methods=["POST"])
+def worker_scrape_claim(job_id):
+    payload = request.get_json(silent=True) or {}
+    worker_id = (payload.get("worker_id") or "").strip()
+    if not worker_id:
+        return jsonify({"ok": False, "error": "worker_id zorunlu."}), 400
+    if not db.claim_scrape_job(job_id, worker_id):
+        return jsonify({"ok": False, "error": "İş zaten alınmış veya yok."}), 409
+    db.append_log(job_id, f"Yerel ajan ({worker_id}) işi aldı.", level="info")
+    return jsonify({"ok": True})
+
+
+@app.route("/api/worker/scrape-progress/<int:job_id>", methods=["POST"])
+def worker_scrape_progress(job_id):
+    payload = request.get_json(silent=True) or {}
+    fields = {}
+    for k in ("scrape_page", "scrape_total_pages", "scrape_count"):
+        if k in payload and payload[k] is not None:
+            try:
+                fields[k] = int(payload[k])
+            except (TypeError, ValueError):
+                pass
+    if fields:
+        db.update_job(job_id, **fields)
+    msg = payload.get("message")
+    if msg:
+        db.append_log(job_id, str(msg), level=payload.get("level") or "info")
+    return jsonify({"ok": True})
+
+
+@app.route("/api/worker/scrape-finish/<int:job_id>", methods=["POST"])
+def worker_scrape_finish(job_id):
+    payload = request.get_json(silent=True) or {}
+    status = payload.get("status") or "done"
+    error = payload.get("error")
+    if status == "done":
+        db.finish_job(job_id, status="done")
+        db.append_log(job_id, "Yerel tarama başarıyla tamamlandı.", level="info")
+    else:
+        db.finish_job(job_id, status="error", error=str(error) if error else None)
+        db.append_log(job_id, f"Yerel tarama hata ile sonlandı: {error}", level="error")
+    return jsonify({"ok": True})
 
 
 # ---------------- ingest (for the local runner) ----------------

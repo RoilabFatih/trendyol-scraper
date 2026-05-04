@@ -118,46 +118,16 @@ def _run(job_id: int, settings: dict) -> None:
                 level="warn",
             )
 
-        # ---------- Phase 2: Storefront scrape ----------
-        db.update_job(job_id, phase="scrape")
-        _log(job_id, f"Satıcı storefront taraması başlıyor (mid={seller_id}).")
-        scraper = SellerStorefrontScraper()
-        scraped_total = 0
-
-        def on_page(page, total_pages, page_count, cumulative):
-            db.update_job(
-                job_id,
-                scrape_page=page,
-                scrape_total_pages=total_pages or 0,
-                scrape_count=cumulative,
-            )
-            _log(
-                job_id,
-                f"Tarama sayfa {page}/{total_pages or '?'}: {page_count} ürün okundu "
-                f"(birikmiş {cumulative}).",
-            )
-
-        try:
-            batch: list[dict] = []
-            for prod in scraper.iter_products(seller_id, on_page=on_page):
-                batch.append(prod)
-                if len(batch) >= 50:
-                    db.upsert_scraped_products(batch)
-                    scraped_total += len(batch)
-                    db.update_job(job_id, scrape_count=scraped_total)
-                    batch = []
-            if batch:
-                db.upsert_scraped_products(batch)
-                scraped_total += len(batch)
-                db.update_job(job_id, scrape_count=scraped_total)
-        except StorefrontScraperError as exc:
-            _log(job_id, f"Tarama hatası: {exc}", level="error")
-            raise
-
-        _log(job_id, f"Tarama tamam. Toplam {scraped_total} farklı ürün.")
-
-        db.finish_job(job_id, status="done")
-        _log(job_id, "İş başarıyla tamamlandı.")
+        # ---------- Phase 2: hand off scrape to a local worker ----------
+        # Trendyol's Cloudflare WAF blocks non-TR datacenter IPs from the
+        # storefront, so we don't scrape from Railway. Instead we mark the
+        # job as awaiting and let the user's local_worker.py pick it up.
+        db.update_job(job_id, phase="awaiting_local_scrape", status="awaiting_local_scrape")
+        _log(
+            job_id,
+            "API aşaması bitti. Tarama aşaması için yerel ajan bekleniyor "
+            "(makinende `start_worker.bat` çalışıyor olmalı).",
+        )
 
     except Exception as exc:
         tb = traceback.format_exc(limit=5)

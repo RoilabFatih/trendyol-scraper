@@ -78,7 +78,15 @@ CREATE TABLE IF NOT EXISTS jobs (
     scrape_count   INTEGER,
     error          TEXT,
     started_at     TEXT,
-    finished_at    TEXT
+    finished_at    TEXT,
+    claimed_by     TEXT,
+    claimed_at     TEXT
+);
+
+CREATE TABLE IF NOT EXISTS worker_heartbeats (
+    worker_id  TEXT PRIMARY KEY,
+    last_seen  TEXT,
+    info       TEXT
 );
 
 CREATE TABLE IF NOT EXISTS job_logs (
@@ -110,6 +118,11 @@ def init_db() -> None:
             for col in ("model TEXT",):
                 try:
                     conn.execute(f"ALTER TABLE scraped_products ADD COLUMN {col}")
+                except sqlite3.OperationalError:
+                    pass
+            for col in ("claimed_by TEXT", "claimed_at TEXT"):
+                try:
+                    conn.execute(f"ALTER TABLE jobs ADD COLUMN {col}")
                 except sqlite3.OperationalError:
                     pass
         _initialized = True
@@ -339,6 +352,47 @@ def append_log(job_id: int, message: str, level: str = "info") -> None:
             "INSERT INTO job_logs (job_id, ts, level, message) VALUES (?, ?, ?, ?)",
             (job_id, now_iso(), level, message),
         )
+
+
+def find_pending_scrape_job() -> dict | None:
+    """Return the oldest job whose API phase finished and that is now waiting
+    for a local worker to do the scrape phase."""
+    with connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM jobs WHERE status = 'awaiting_local_scrape' "
+            "ORDER BY id ASC LIMIT 1"
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def claim_scrape_job(job_id: int, worker_id: str) -> bool:
+    """Atomic claim: only succeeds if the job is still awaiting."""
+    with connection() as conn:
+        cur = conn.execute(
+            "UPDATE jobs SET status='scraping_local', phase='scrape', "
+            "claimed_by=?, claimed_at=? "
+            "WHERE id = ? AND status = 'awaiting_local_scrape'",
+            (worker_id, now_iso(), job_id),
+        )
+        return cur.rowcount == 1
+
+
+def heartbeat(worker_id: str, info: str | None = None) -> None:
+    with connection() as conn:
+        conn.execute(
+            "INSERT INTO worker_heartbeats(worker_id, last_seen, info) "
+            "VALUES(?, ?, ?) ON CONFLICT(worker_id) DO UPDATE SET "
+            "last_seen=excluded.last_seen, info=excluded.info",
+            (worker_id, now_iso(), info),
+        )
+
+
+def latest_heartbeat() -> dict | None:
+    with connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM worker_heartbeats ORDER BY last_seen DESC LIMIT 1"
+        ).fetchone()
+        return dict(row) if row else None
 
 
 def get_logs(job_id: int, after_id: int = 0, limit: int = 500) -> list[dict]:
