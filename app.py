@@ -121,14 +121,15 @@ def save_settings():
         return jsonify({"ok": False, "error": "Geçersiz istek gövdesi."}), 400
 
     cleaned = {}
+    explicit_clear = bool(payload.get("_clear_secret"))
     for key in db.SETTING_KEYS:
         if key in payload:
             value = payload.get(key)
             if value is None:
                 continue
             value = str(value).strip()
-            # Don't overwrite secret with empty string (UI sends empty if untouched).
-            if key == "api_secret" and not value:
+            # Don't overwrite secret with empty string unless explicitly cleared.
+            if key == "api_secret" and not value and not explicit_clear:
                 continue
             cleaned[key] = value
     db.update_settings(cleaned)
