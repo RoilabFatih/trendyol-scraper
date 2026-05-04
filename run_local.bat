@@ -1,6 +1,8 @@
 @echo off
+chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
+set PYTHONIOENCODING=utf-8
 
 if not exist ".venv\Scripts\python.exe" (
     echo [setup] Sanal ortam olusturuluyor...

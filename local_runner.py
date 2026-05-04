@@ -15,6 +15,13 @@ import json
 import os
 import sys
 import time
+
+# Force UTF-8 stdout so Turkish chars + emoji don't crash on Windows cp1254.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 from typing import Iterable
 from urllib.parse import urlparse
 

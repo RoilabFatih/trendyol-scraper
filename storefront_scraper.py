@@ -16,6 +16,18 @@ from urllib.parse import urlencode
 
 import requests
 
+# Trendyol's Cloudflare WAF rejects the default Python TLS fingerprint with
+# HTTP 403 even when sent from a Turkish IP. curl_cffi impersonates a real
+# Chrome TLS handshake and gets through. We use it transparently when it's
+# installed; otherwise we fall back to plain requests (and you'll need a
+# proxy or to install curl_cffi to bypass Cloudflare).
+try:
+    from curl_cffi import requests as cffi_requests  # type: ignore
+    _HAS_CURL_CFFI = True
+except ImportError:  # pragma: no cover
+    cffi_requests = None  # type: ignore
+    _HAS_CURL_CFFI = False
+
 
 HEADERS = {
     "User-Agent": (
@@ -40,7 +52,11 @@ class SellerStorefrontScraper:
 
     def __init__(self, timeout: int = 25, proxy: str | None = None):
         self.timeout = timeout
-        self.session = requests.Session()
+        # Prefer curl_cffi for Cloudflare TLS fingerprint bypass when available.
+        if _HAS_CURL_CFFI:
+            self.session = cffi_requests.Session(impersonate="chrome124")
+        else:
+            self.session = requests.Session()
         self.session.headers.update(HEADERS)
         # Optional outbound proxy: route through a Turkish residential / mobile
         # proxy if Trendyol's WAF is blocking the server's datacenter IP.
@@ -53,7 +69,7 @@ class SellerStorefrontScraper:
         url = f"{self.BASE}?{urlencode(params)}"
         try:
             r = self.session.get(url, timeout=self.timeout, allow_redirects=True)
-        except requests.RequestException as exc:
+        except Exception as exc:  # noqa: BLE001 — curl_cffi raises its own exceptions
             raise StorefrontScraperError(f"İstek başarısız: {exc}") from exc
 
         if r.status_code == 403:
