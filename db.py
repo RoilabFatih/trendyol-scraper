@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS scraped_products (
     product_main_id TEXT PRIMARY KEY,
     product_url     TEXT,
     product_name    TEXT,
+    model           TEXT,
     strike_price    REAL,
     sale_price      REAL,
     ty_plus_price   REAL,
@@ -105,6 +106,12 @@ def init_db() -> None:
         _ensure_dir(DB_PATH)
         with connection() as conn:
             conn.executescript(SCHEMA)
+            # Idempotent migrations for tables created before new columns existed.
+            for col in ("model TEXT",):
+                try:
+                    conn.execute(f"ALTER TABLE scraped_products ADD COLUMN {col}")
+                except sqlite3.OperationalError:
+                    pass
         _initialized = True
 
 
@@ -232,12 +239,13 @@ def upsert_scraped_products(rows: list[dict]) -> int:
         return 0
     sql = (
         "INSERT INTO scraped_products ("
-        "product_main_id, product_url, product_name, strike_price, sale_price, "
+        "product_main_id, product_url, product_name, model, strike_price, sale_price, "
         "ty_plus_price, fav_count, review_count, rating, raw, scraped_at"
-        ") VALUES (:product_main_id, :product_url, :product_name, :strike_price, "
+        ") VALUES (:product_main_id, :product_url, :product_name, :model, :strike_price, "
         ":sale_price, :ty_plus_price, :fav_count, :review_count, :rating, :raw, :scraped_at) "
         "ON CONFLICT(product_main_id) DO UPDATE SET "
         "product_url=excluded.product_url, product_name=excluded.product_name, "
+        "model=COALESCE(excluded.model, scraped_products.model), "
         "strike_price=excluded.strike_price, sale_price=excluded.sale_price, "
         "ty_plus_price=excluded.ty_plus_price, fav_count=excluded.fav_count, "
         "review_count=excluded.review_count, rating=excluded.rating, "
@@ -250,6 +258,7 @@ def upsert_scraped_products(rows: list[dict]) -> int:
             "product_main_id": str(r.get("product_main_id") or ""),
             "product_url": r.get("product_url"),
             "product_name": r.get("product_name"),
+            "model": r.get("model"),
             "strike_price": r.get("strike_price"),
             "sale_price": r.get("sale_price"),
             "ty_plus_price": r.get("ty_plus_price"),

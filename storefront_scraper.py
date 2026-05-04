@@ -41,6 +41,7 @@ HEADERS = {
 
 
 P_PATTERN = re.compile(r"-p-(\d+)")
+PRODUCT_CODE_PATTERN = re.compile(r'"productCode"\s*:\s*"([^"]+)"')
 
 
 class StorefrontScraperError(Exception):
@@ -63,6 +64,24 @@ class SellerStorefrontScraper:
         proxy = proxy or os.environ.get("TRENDYOL_PROXY") or os.environ.get("HTTPS_PROXY")
         if proxy:
             self.session.proxies = {"http": proxy, "https": proxy}
+
+    def fetch_product_code(self, product_url: str) -> str | None:
+        """Fetch a product detail page and extract its `productCode`
+        (the seller's stock SKU, equivalent to `productMainId` in the
+        Seller API). Returns None on any failure so the caller can keep
+        going."""
+        if not product_url:
+            return None
+        if product_url.startswith("/"):
+            product_url = "https://www.trendyol.com" + product_url
+        try:
+            r = self.session.get(product_url, timeout=self.timeout, allow_redirects=True)
+        except Exception:
+            return None
+        if r.status_code != 200:
+            return None
+        m = PRODUCT_CODE_PATTERN.search(r.text)
+        return m.group(1) if m else None
 
     def fetch_page(self, seller_id: str, page: int = 1) -> dict:
         params = {"mid": str(seller_id).strip(), "pi": page}

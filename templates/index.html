@@ -624,7 +624,7 @@
                     <td class="num">${num(r.fav_count)}</td>
                     <td class="num">${num(r.review_count)}</td>
                     <td class="num">${r.rating != null ? r.rating.toFixed(1) : '—'}</td>
-                    <td>${escapeHtml(r.api_model)}</td>
+                    <td>${escapeHtml(r.model || r.api_model)}</td>
                     <td>${escapeHtml(r.api_color)}</td>
                     <td>${escapeHtml(r.api_category)}</td>
                     <td>${escapeHtml(r.api_brand)}</td>

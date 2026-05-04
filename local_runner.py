@@ -132,15 +132,18 @@ def run_api_phase(cfg: dict, panel: requests.Session) -> int:
 
 
 def run_scrape_phase(cfg: dict, panel: requests.Session) -> int:
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     line(f"\n🕷️  Tarama aşaması başlıyor (mid={cfg['seller_id']})")
     scraper = SellerStorefrontScraper()
-    pushed = 0
-    batch: list[dict] = []
-    last_total = 0
+    enrichment_workers = int(cfg.get("enrichment_workers", 8))
+
+    # Step 1: walk listing pages and collect every product
+    collected: list[dict] = []
 
     def on_page(page, total_pages, page_count, cumulative):
         progress(
-            f"   Tarama sayfa {page}/{total_pages or '?'}  "
+            f"   Liste sayfa {page}/{total_pages or '?'}  "
             f"sayfa içi {page_count}  birikmiş {cumulative}"
         )
 
@@ -150,17 +153,46 @@ def run_scrape_phase(cfg: dict, panel: requests.Session) -> int:
             on_page=on_page,
             max_pages=int(cfg["scrape_max_pages"]),
         ):
-            batch.append(prod)
-            if len(batch) >= INGEST_BATCH:
-                res = push_rows(panel, cfg["panel_url"], "scraped-products", batch)
-                pushed += int(res.get("inserted", 0))
-                batch = []
-        if batch:
-            res = push_rows(panel, cfg["panel_url"], "scraped-products", batch)
-            pushed += int(res.get("inserted", 0))
+            collected.append(prod)
     except StorefrontScraperError as exc:
         line(f"\n❌  Tarama hatası: {exc}")
         raise
+    line("")
+    line(f"📋  {len(collected)} ürün listelendi.")
+
+    # Step 2: enrich each product with its productCode (model) by
+    #          fetching the detail page in parallel.
+    if collected and not cfg.get("skip_model_enrichment"):
+        line(f"🔍  Model (productCode) bilgisi her ürün için detay sayfasından çekiliyor "
+             f"({enrichment_workers} paralel)…")
+
+        # Each worker thread should use its own scraper / session for safety.
+        worker_scrapers = [SellerStorefrontScraper() for _ in range(enrichment_workers)]
+        worker_index = {0: 0}  # naive round-robin via a shared counter
+
+        def fetch_one(item: dict) -> dict:
+            wsc = worker_scrapers[worker_index[0] % enrichment_workers]
+            worker_index[0] += 1
+            code = wsc.fetch_product_code(item.get("product_url") or "")
+            item["model"] = code
+            return item
+
+        done = 0
+        with ThreadPoolExecutor(max_workers=enrichment_workers) as ex:
+            futures = [ex.submit(fetch_one, p) for p in collected]
+            for _ in as_completed(futures):
+                done += 1
+                if done % 10 == 0 or done == len(collected):
+                    progress(f"   Detay sayfa {done}/{len(collected)}")
+        line("")
+
+    # Step 3: push everything in batches.
+    pushed = 0
+    for i in range(0, len(collected), INGEST_BATCH):
+        chunk = collected[i : i + INGEST_BATCH]
+        res = push_rows(panel, cfg["panel_url"], "scraped-products", chunk)
+        pushed += int(res.get("inserted", 0))
+        progress(f"   Push {min(i + INGEST_BATCH, len(collected))}/{len(collected)}")
     line("")
     line(f"✅  Tarama tamam — {pushed} ürün ingest edildi.")
     return pushed
