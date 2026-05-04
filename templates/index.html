@@ -289,6 +289,13 @@
                     ardından satıcının tüm ürünleri <strong>Trendyol storefront</strong>'undan taranır.
                     Sonuçlar Veriler sekmesinde görünür.
                 </p>
+                <p class="hint" style="background:rgba(251,191,36,0.10);border:1px solid rgba(251,191,36,0.35);padding:.55rem .75rem;border-radius:.4rem;color:#fde68a;">
+                    ⚠️ <strong>Not:</strong> Storefront tarama Trendyol'un Cloudflare WAF'ı tarafından
+                    Türkiye dışı veri merkezi IP'lerinden engellenir (HTTP 403). Bu sunucudan
+                    sadece <strong>API aşaması</strong> başarılı olur. Storefront verisini de almak için
+                    repodaki <code>run_local.bat</code> ile kendi makinenizden çalıştırın — sonuçlar
+                    yine bu panele yüklenir.
+                </p>
                 <div class="row">
                     <button id="run-btn" class="primary">Çalıştır</button>
                     <span class="badge idle" id="job-status-badge">BEKLİYOR</span>

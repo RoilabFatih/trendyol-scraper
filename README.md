@@ -52,6 +52,46 @@ python app.py
 
 `http://localhost:8000` → Parametreler sekmesinden başlayın.
 
+## ⚠️ Storefront Tarama: TR Olmayan Sunucular Bloklanıyor
+
+Trendyol'un `/sr?mid=...` (satıcı listeleme) sayfası **Cloudflare WAF** arkasında.
+TR-dışı veri merkezi IP'lerinden gelen istekleri 403 ile reddediyor — Railway sunucusu da
+bunlardan biri. **Seller API** (`apigw.trendyol.com`) ise her IP'den çalışır.
+
+Bu yüzden iki çalıştırma seçeneği var:
+
+| Senaryo | API çekimi | Storefront tarama |
+|---|---|---|
+| Panelden **Çalıştır** (Railway) | ✅ Çalışır | ❌ HTTP 403 |
+| Yerel **`run_local.bat`** (Türk IP) | ✅ Çalışır | ✅ Çalışır (curl_cffi ile) |
+
+### Yerel runner kullanımı (Windows tek tık)
+
+1. Bu repoyu klonla: `git clone https://github.com/RoilabFatih/trendyol-scraper.git`
+2. `local_config.example.json` dosyasını `local_config.json` olarak kopyala ve doldur:
+   ```json
+   {
+     "panel_url": "https://web-production-f4cf6.up.railway.app",
+     "access_token": "BURAYA_PANEL_ERIŞIM_TOKENI",
+     "seller_id": "BURAYA_SATICI_ID",
+     "api_key": "BURAYA_API_KEY",
+     "api_secret": "BURAYA_API_SECRET",
+     "page_size": 200,
+     "scrape_max_pages": 200
+   }
+   ```
+3. `run_local.bat` dosyasını çift tıkla
+   - İlk çalıştırmada otomatik venv oluşturur ve bağımlılıkları yükler (curl_cffi dahil)
+   - API'den ve storefront'tan veri çeker, sonuçları **Railway DB'ye gönderir**
+   - Veriler: panel → Veriler sekmesi
+4. Sonraki çalıştırmalarda sadece `run_local.bat` → her şey hazır
+
+Sadece bir aşamayı çalıştırmak için:
+```
+run_local.bat --api-only
+run_local.bat --scrape-only
+```
+
 ## Railway
 
 1. Repo'yu Railway'de New Project → GitHub Repo'dan deploy edin
