@@ -80,6 +80,9 @@ class SellerStorefrontScraper:
                 "(env var: TRENDYOL_PROXY=http://user:pass@host:port) ya da satıcı "
                 "Seller API'si üzerinden çekim yapın."
             )
+        if r.status_code == 404:
+            # Trendyol returns 404 once you walk past the last available page.
+            return {"page": page, "total_pages": page - 1, "products": [], "end_of_pages": True}
         if r.status_code != 200:
             raise StorefrontScraperError(f"HTTP {r.status_code}")
 
@@ -97,6 +100,8 @@ class SellerStorefrontScraper:
         total_pages: int | None = None
         while page <= max_pages:
             data = self.fetch_page(seller_id, page=page)
+            if data.get("end_of_pages"):
+                break
             products = data.get("products") or []
             if total_pages is None:
                 total_pages = data.get("total_pages") or 0
